@@ -104,6 +104,21 @@ Where:
 
 The ESP32 calculates these target angles at a consistent **40 Hz (25 ms interval)** and dispatches them across the serial line inside a single **`SyncWritePosEx`** broadcast packet.
 
+### How the Sine Wave Moves the Snake
+1. **Wave Propagation:** A continuous sine wave travels backward down the spine ($i=1 \to 13$).
+2. **Anisotropic Friction:** The passive circular wheel collars allow low resistance along the forward axis while blocking lateral slipping ($\mu_n \gg \mu_t$).
+3. **Thrust Generation:** The normal ground reaction force resolves into net forward thrust driving the robot along narrow paths.
+
+| Joint (Segment) | Phase Offset | $t = 0.00\text{s}$ (Angle / Tick) | $t = 0.25\text{s}$ (Angle / Tick) | $t = 0.50\text{s}$ (Angle / Tick) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Servo 01 (Head)** | $0^\circ$ | $+0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 |
+| **Servo 04** | $120^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 |
+| **Servo 07** | $240^\circ$ | $-30.3^\circ$ / 1703 | $-33.8^\circ$ / 1663 | $-17.5^\circ$ / 1849 |
+| **Servo 10** | $360^\circ$ | $+0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 |
+| **Servo 13 (Tail)** | $480^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 |
+
+> 📖 **Full Numerical Dataset & Derivation:** See [docs/kinematics.md](docs/kinematics.md) for the complete 13-joint angle/tick data matrix across the full cycle and ground reaction force analysis.
+
 ---
 
 ## Repository Structure

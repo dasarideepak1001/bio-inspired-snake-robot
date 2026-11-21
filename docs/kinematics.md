@@ -1,58 +1,124 @@
 # Kinematics & Serpentine Locomotion Guide
 
-This document describes the mathematical formulation of the **Hirose Serpenoid curve** and how the Central Pattern Generator (CPG) controls the 13 articulated joints on the snake robot.
+This document provides an in-depth mathematical derivation, physics explanation, and concrete numerical dataset showing **how the sine wave (Hirose Serpenoid curve) is generated, travels down the 13 joints, and propels the snake robot forward**.
 
 ---
 
-## 1. The Hirose Serpenoid Curve
+## 1. How the Sine Wave Generates Forward Motion
 
-Biological snakes propel themselves over terrain primarily via **lateral undulation**. Shigeo Hirose discovered that the curvature along a biological snake’s spine varies continuously as a sinusoidal function of body length.
+A biological snake does not have wheels or legs; it propels itself across terrain by undulating its body in continuous curves. In robotics, this is known as **lateral undulation**.
 
-For a discrete multi-joint modular snake robot, the relative angle $\theta_i$ of joint $i$ at time $t$ is expressed as:
+```
+                Wave Travel Direction (Backwards: Head -> Tail)
+               ==============================================>
+  HEAD                                                                 TAIL
+   [01]----[02]                                                  [12]----[13]
+         \      \             [06]----[07]                     /      /
+          \      \           /            \                   /      /
+           [03]----[04]----[05]            [08]----[09]----[10]----[11]
+               <==============================================
+                    Robot Forward Propulsion Direction
+```
 
-$$\theta_i(t) = A \cdot \sin(2\pi f t + (i - 1)\Delta\phi) + \gamma$$
-
-### Variable Descriptions:
-- **$i \in \{1, 2, \dots, N\}$**: The joint index ($N = 13$ in this robot).
-- **$A$ (Amplitude)**: The maximum angular displacement of each joint (in degrees or radians). Controls the width of the slithering wave.
-- **$f$ (Temporal Frequency)**: The wave oscillation speed in Hertz ($\text{Hz} = \text{cycles/sec}$). Controls how fast the wave travels from head to tail.
-- **$\Delta\phi$ (Spatial Phase Shift)**: The phase difference between two consecutive joints. Controls how many S-curves exist along the body.
-- **$\gamma$ (Steering Bias)**: A constant directional offset applied to all joints. Tilts the body axis left or right for smooth steering.
-
----
-
-## 2. Encoder Mapping (12-bit Resolution)
-
-The Waveshare ST3020 / ST3215 uses a high-precision 12-bit magnetic encoder with $4096$ steps per $360^\circ$:
-
-$$\text{Steps per Degree} = \frac{4096}{360} \approx 11.378 \text{ ticks/deg}$$
-
-$$\text{Target Position Steps} = 2048 + (\theta_i(t) \times 11.378)$$
-
-- $\theta_i = 0^\circ \implies 2048$ (Straight / Neutral)
-- $\theta_i = +35^\circ \implies 2048 + (35 \times 11.378) = 2446$
-- $\theta_i = -35^\circ \implies 2048 - (35 \times 11.378) = 1650$
+When a serpentine wave travels backward from head to tail:
+1. Each segment exerts a lateral force against the ground.
+2. The **passive circular wheels/collars** have **anisotropic friction**:
+   - **Low tangential friction ($\mu_t \approx 0.1$):** Free rolling forward along the segment axis.
+   - **High normal friction ($\mu_n \approx 0.9$):** Resists sliding sideways.
+3. The ground pushes back perpendicular to the wheels, and because sliding sideways is blocked, the reaction force vector resolves into a net **forward thrust along the snake's centerline**.
 
 ---
 
-## 3. Recommended Gait Parameter Values
+## 2. Mathematical Formulation: Hirose Serpenoid Equation
 
-| Terrain Condition | Amplitude ($A$) | Frequency ($f$) | Phase Lag ($\Delta\phi$) | Notes |
-| :--- | :---: | :---: | :---: | :--- |
-| **Flat Floor / Laboratory** | $32^\circ - 36^\circ$ | $0.45\text{ Hz} - 0.60\text{ Hz}$ | $40^\circ$ | High efficiency, maximum forward speed |
-| **Tight Caves / Holes** | $22^\circ - 26^\circ$ | $0.35\text{ Hz} - 0.45\text{ Hz}$ | $35^\circ$ | Low-profile lateral sweep avoids tunnel walls |
-| **Rough Rocky Ground** | $38^\circ - 42^\circ$ | $0.30\text{ Hz} - 0.40\text{ Hz}$ | $45^\circ$ | High torque, deep undulations push against rocks |
+The angle of joint $i$ ($i = 1, 2, \dots, 13$) at elapsed time $t$ (in seconds) is governed by:
+
+$$\theta_i(t) = A \cdot \sin\left(2\pi f t + (i - 1)\Delta\phi\right) + \gamma$$
+
+### Parameters:
+- **$i$ (Joint Index):** $1$ (Head-adjacent joint) to $13$ (Tail joint).
+- **$A$ (Wave Amplitude):** Nominal value is $35.0^\circ$. Determines the lateral breadth of the S-curves.
+- **$f$ (Oscillation Frequency):** Nominal value is $0.50\text{ Hz}$ (one complete oscillation cycle every $2.0$ seconds).
+- **$\Delta\phi$ (Spatial Phase Shift):** Nominal value is $40.0^\circ$ ($0.698\text{ rad}$). Dictates the angular difference between adjacent servos:
+  $$\text{Spatial Wavelength } \lambda = \frac{360^\circ}{\Delta\phi} = \frac{360^\circ}{40^\circ} = 9 \text{ segments per full S-wave}$$
+  Across 13 segments, the robot displays approximately $1.44$ complete sinusoidal waves.
+- **$\gamma$ (Steering Bias):** Directional offset. $\gamma = 0^\circ$ moves straight; $\gamma < 0$ turns left; $\gamma > 0$ turns right.
 
 ---
 
-## 4. Steering Dynamics
+## 3. Real-Time Sine Wave Dataset (13 Segments Over Time)
 
-Steering the snake robot does not require complex differential kinematics. By adding a constant offset $\gamma$ to the Serpenoid wave:
+Below is the exact numerical dataset generated by the ESP32-C3 firmware running at nominal settings ($A = 35.0^\circ$, $f = 0.5\text{ Hz}$, $\Delta\phi = 40.0^\circ$, $\gamma = 0.0^\circ$).
+
+- **Angle:** Joint deflection in degrees relative to center ($0^\circ = \text{neutral}$).
+- **Tick:** 12-bit magnetic encoder value ($0 \dots 4095$), where $2048$ is center:
+  $$\text{Target Ticks} = 2048 + \left(\theta_i \times \frac{4096}{360}\right) = 2048 + (\theta_i \times 11.378)$$
+
+| Joint ID | Phase Offset $(i-1)\Delta\phi$ | $t = 0.00\text{s}$ (Angle / Tick) | $t = 0.25\text{s}$ (Angle / Tick) | $t = 0.50\text{s}$ (Angle / Tick) | $t = 0.75\text{s}$ (Angle / Tick) | $t = 1.00\text{s}$ (Angle / Tick) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Servo 01 (Head)** | $0^\circ$ | $+0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 | $+24.7^\circ$ / 2330 | $+0.0^\circ$ / 2048 |
+| **Servo 02** | $40^\circ$ | $+22.5^\circ$ / 2304 | $+34.9^\circ$ / 2445 | $+26.8^\circ$ / 2353 | $+3.1^\circ$ / 2083 | $-22.5^\circ$ / 1792 |
+| **Servo 03** | $80^\circ$ | $+34.5^\circ$ / 2440 | $+28.7^\circ$ / 2374 | $+6.1^\circ$ / 2117 | $-20.1^\circ$ / 1820 | $-34.5^\circ$ / 1656 |
+| **Servo 04** | $120^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 | $-33.8^\circ$ / 1663 | $-30.3^\circ$ / 1703 |
+| **Servo 05** | $160^\circ$ | $+12.0^\circ$ / 2184 | $-14.8^\circ$ / 1880 | $-32.9^\circ$ / 1674 | $-31.7^\circ$ / 1687 | $-12.0^\circ$ / 1912 |
+| **Servo 06** | $200^\circ$ | $-12.0^\circ$ / 1912 | $-31.7^\circ$ / 1687 | $-32.9^\circ$ / 1674 | $-14.8^\circ$ / 1880 | $+12.0^\circ$ / 2184 |
+| **Servo 07** | $240^\circ$ | $-30.3^\circ$ / 1703 | $-33.8^\circ$ / 1663 | $-17.5^\circ$ / 1849 | $+9.1^\circ$ / 2151 | $+30.3^\circ$ / 2393 |
+| **Servo 08** | $280^\circ$ | $-34.5^\circ$ / 1656 | $-20.1^\circ$ / 1820 | $+6.1^\circ$ / 2117 | $+28.7^\circ$ / 2374 | $+34.5^\circ$ / 2440 |
+| **Servo 09** | $320^\circ$ | $-22.5^\circ$ / 1792 | $+3.1^\circ$ / 2083 | $+26.8^\circ$ / 2353 | $+34.9^\circ$ / 2445 | $+22.5^\circ$ / 2304 |
+| **Servo 10** | $360^\circ$ | $0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 | $+24.7^\circ$ / 2330 | $+0.0^\circ$ / 2048 |
+| **Servo 11** | $400^\circ$ | $+22.5^\circ$ / 2304 | $+34.9^\circ$ / 2445 | $+26.8^\circ$ / 2353 | $+3.1^\circ$ / 2083 | $-22.5^\circ$ / 1792 |
+| **Servo 12** | $440^\circ$ | $+34.5^\circ$ / 2440 | $+28.7^\circ$ / 2374 | $+6.1^\circ$ / 2117 | $-20.1^\circ$ / 1820 | $-34.5^\circ$ / 1656 |
+| **Servo 13 (Tail)** | $480^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 | $-33.8^\circ$ / 1663 | $-30.3^\circ$ / 1703 |
+
+### Observing the Sine Wave Dynamics in the Table:
+1. **Wave Propagation:** At $t = 0.00\text{s}$, the maximum positive bend is at **Servo 03** ($+34.5^\circ$). By $t = 0.25\text{s}$, that positive peak shifts up toward **Servo 02** ($+34.9^\circ$), and at $t = 0.50\text{s}$ it reaches **Servo 01** ($+35.0^\circ$). The crest of the wave physically travels along the robot.
+2. **Spatial Periodicity:** Servo 10 has a phase shift of $360^\circ$ ($9 \times 40^\circ$), which exactly equals one full sine wave cycle. Notice that Servo 10 has the identical angle and ticks as Servo 01 at every single instant!
+3. **Smooth Servo Motion:** The 12-bit magnetic encoder transitions smoothly between minimum ($1656$ ticks) and maximum ($2446$ ticks) without discontinuous jumps.
+
+---
+
+## 4. ESP32-C3 Firmware Implementation
+
+In `firmware/snake_controller/snake_controller.ino`, this calculation executes inside a high-speed non-blocking loop every **25 ms (40 Hz)**:
+
+```cpp
+void updateSerpentineGait() {
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastGaitUpdate < GAIT_INTERVAL_MS) return;
+  lastGaitUpdate = currentMillis;
+
+  float t = currentMillis / 1000.0f; // Current time in seconds
+  float deltaPhiRad = radians(phaseShiftDeg);
+
+  for (int i = 0; i < NUM_SERVOS; i++) {
+    // 1. Calculate continuous sine phase for joint i
+    float phase = (2.0f * PI * locomotionFreq * t) + (i * deltaPhiRad);
+    
+    // 2. Compute joint angle in degrees with steering bias
+    float angleDeg = (locomotionAmp * sin(phase)) + steeringBias;
+    
+    // 3. Map angle in degrees to 12-bit servo ticks (0 - 4095)
+    int targetTick = 2048 + (int)(angleDeg * (4096.0f / 360.0f));
+    targetTick = constrain(targetTick, 1000, 3100); // Safety boundary
+    
+    positions[i] = targetTick;
+    speeds[i]    = 1800; // Fast response without overshoot
+    accs[i]      = 50;   // Smooth jerk-free acceleration
+  }
+
+  // 4. Dispatch all 13 servo targets in a single 1 Mbps broadcast packet
+  st.SyncWritePosEx(servoIDs, NUM_SERVOS, positions, speeds, accs);
+}
+```
+
+---
+
+## 5. Steering Dynamics
+
+Turning is achieved by simply offsetting the center of oscillation with the constant steering bias term $\gamma$:
 
 $$\theta_i(t) = A \cdot \sin(\dots) + \gamma$$
 
-- **Straight Motion:** $\gamma = 0^\circ$
-- **Left Turn:** $\gamma = -12^\circ \text{ to } -18^\circ$
-- **Right Turn:** $\gamma = +12^\circ \text{ to } +18^\circ$
-
-The body will bend into an arc while continuing its undulating wave, producing a smooth turning radius.
+- **Straight Forward ($\gamma = 0^\circ$):** Symmetrical sine wave centered around the neutral axis ($2048$ ticks).
+- **Left Turn ($\gamma = -12^\circ \text{ to } -18^\circ$):** The entire wave shifts left, causing the robot to curl into a leftward arc while continuing forward slithering.
+- **Right Turn ($\gamma = +12^\circ \text{ to } +18^\circ$):** The wave shifts right, carving a smooth rightward radius.
