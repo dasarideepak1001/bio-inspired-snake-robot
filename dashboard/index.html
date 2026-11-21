@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Robot - Search & Rescue Telemetry Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --card-bg: #141a24;
+      --card-border: #222d3d;
+      --primary: #00e5ff;
+      --accent: #ff9100;
+      --danger: #ff1744;
+      --safe: #00e676;
+      --text: #e0e6ed;
+      --text-muted: #78889b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .title-group h1 {
+      font-size: 24px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-group p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #000;
+      border: none;
+    }
+
+    button.primary:hover {
+      background: #33ebff;
+      color: #000;
+    }
+
+    button.danger {
+      background: rgba(255, 23, 68, 0.2);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    button.danger:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .badge.connected {
+      background: rgba(0, 230, 118, 0.15);
+      color: var(--safe);
+      border: 1px solid var(--safe);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .metric-value {
+      font-size: 38px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .metric-unit {
+      font-size: 18px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .status-pill {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-pill.safe {
+      background: rgba(0, 230, 118, 0.15);
+      color: var(--safe);
+    }
+
+    .status-pill.hazard {
+      background: rgba(255, 23, 68, 0.2);
+      color: var(--danger);
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
+    }
+
+    .gauge-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #1c2433;
+      border-radius: 4px;
+      margin-top: 15px;
+      overflow: hidden;
+    }
+
+    .gauge-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 30%;
+      transition: width 0.3s ease;
+    }
+
+    /* Spine Canvas Visualization */
+    .full-card {
+      grid-column: 1 / -1;
+    }
+
+    #spineCanvas {
+      width: 100%;
+      height: 180px;
+      background: #0d121a;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .control-item label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .control-item input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-group">
+      <h1>🐍 Bio-Inspired Snake Robot Telemetry</h1>
+      <p>Search & Rescue Mission Control • ESP32-C3 & 13x ST3020 Bus Servos</p>
+    </div>
+    <div class="header-controls">
+      <span class="badge connected" id="connectionBadge">● DEMO SIMULATION</span>
+      <button id="btnConnectSerial" class="primary">Connect via USB (WebSerial)</button>
+      <button id="btnEmergencyStop" class="danger">EMERGENCY STOP</button>
+    </div>
+  </header>
+
+  <!-- Telemetry Cards -->
+  <div class="grid">
+    <!-- IMU Roll & Pitch -->
+    <div class="card">
+      <h3>Orientation (MPU-6050) <span>IMU</span></h3>
+      <div style="display: flex; gap: 20px;">
+        <div>
+          <span style="color: var(--text-muted); font-size: 12px;">PITCH</span>
+          <div class="metric-value" id="valPitch">+3.2<span class="metric-unit">°</span></div>
+        </div>
+        <div>
+          <span style="color: var(--text-muted); font-size: 12px;">ROLL</span>
+          <div class="metric-value" id="valRoll">-1.4<span class="metric-unit">°</span></div>
+        </div>
+      </div>
+      <div class="status-pill safe" id="tiltStatus">LEVEL TERRAIN</div>
+    </div>
+
+    <!-- MQ-3 Gas Sensor -->
+    <div class="card">
+      <h3>Hazardous Gas (MQ-3) <span>Air Quality</span></h3>
+      <div class="metric-value" id="valGas">420<span class="metric-unit">ADC</span></div>
+      <div class="gauge-bar-bg">
+        <div class="gauge-bar-fill" id="barGas" style="width: 15%;"></div>
+      </div>
+      <div class="status-pill safe" id="gasStatus">SAFE ATMOSPHERE</div>
+    </div>
+
+    <!-- Flame Detection -->
+    <div class="card">
+      <h3>Infrared Flame Detector <span>Optical</span></h3>
+      <div class="metric-value" id="valFlame" style="font-size: 28px;">CLEAR</div>
+      <div class="status-pill safe" id="flameStatus">NO FIRE DETECTED</div>
+    </div>
+
+    <!-- DHT11 Climate -->
+    <div class="card">
+      <h3>Cave Climate (DHT11) <span>Environment</span></h3>
+      <div style="display: flex; gap: 20px;">
+        <div>
+          <span style="color: var(--text-muted); font-size: 12px;">TEMPERATURE</span>
+          <div class="metric-value" id="valTemp">23.5<span class="metric-unit">°C</span></div>
+        </div>
+        <div>
+          <span style="color: var(--text-muted); font-size: 12px;">HUMIDITY</span>
+          <div class="metric-value" id="valHum">68<span class="metric-unit">%</span></div>
+        </div>
+      </div>
+      <div class="status-pill safe">NORMAL CLIMATE</div>
+    </div>
+  </div>
+
+  <!-- 13-Segment Dynamic Spine Visualizer & Gait Controls -->
+  <div class="card full-card">
+    <h3>13-Segment Real-Time Spine Kinematics & Waveform <span>Actuators</span></h3>
+    <canvas id="spineCanvas"></canvas>
+
+    <div class="controls-grid">
+      <div class="control-item">
+        <label>Locomotion Speed (Frequency): <span id="lblFreq">0.45</span> Hz</label>
+        <input type="range" id="sliderFreq" min="0.1" max="1.0" step="0.05" value="0.45">
+      </div>
+      <div class="control-item">
+        <label>Wave Amplitude: <span id="lblAmp">34</span>°</label>
+        <input type="range" id="sliderAmp" min="15" max="50" step="1" value="34">
+      </div>
+      <div class="control-item">
+        <label>Steering Bias: <span id="lblSteer">0</span>°</label>
+        <input type="range" id="sliderSteer" min="-20" max="20" step="1" value="0">
+      </div>
+      <div class="control-item" style="display: flex; align-items: flex-end; gap: 10px;">
+        <button id="btnSteerLeft" style="flex: 1;">⬅ Turn Left</button>
+        <button id="btnSteerStraight" style="flex: 1;">⬆ Straight</button>
+        <button id="btnSteerRight" style="flex: 1;">➡ Turn Right</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Canvas Spine Renderer ---
+    const canvas = document.getElementById('spineCanvas');
+    const ctx = canvas.getContext('2d');
+    let time = 0;
+
+    let freq = 0.45;
+    let amp = 34;
+    let steer = 0;
+    const NUM_SERVOS = 13;
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth - 40;
+      canvas.height = 180;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function renderSpine() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const startX = 60;
+      const centerY = canvas.height / 2;
+      const spacing = (canvas.width - 120) / NUM_SERVOS;
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#222d3d';
+      ctx.lineWidth = 1;
+      ctx.moveTo(startX, centerY);
+      ctx.lineTo(canvas.width - 60, centerY);
+      ctx.stroke();
+
+      let prevX = startX;
+      let prevY = centerY;
+
+      for (let i = 0; i <= NUM_SERVOS; i++) {
+        const phase = (i * 40) * (Math.PI / 180);
+        const wave = Math.sin(time * 2 * Math.PI * freq + phase) * amp;
+        const x = startX + (i * spacing);
+        const y = centerY + (wave * 1.3) + (steer * 1.5);
+
+        if (i > 0) {
+          ctx.beginPath();
+          ctx.strokeStyle = '#00e5ff';
+          ctx.lineWidth = 4;
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+
+          // Draw Waveshare ST3020 Servo Node (Blue + Black Wheel)
+          ctx.fillStyle = '#0288d1';
+          ctx.fillRect(x - 8, y - 8, 16, 16);
+
+          ctx.fillStyle = '#111';
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Snake Head (Orange & Cyan)
+          ctx.fillStyle = '#ff9100';
+          ctx.beginPath();
+          ctx.arc(x, y, 11, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#00e5ff';
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        prevX = x;
+        prevY = y;
+      }
+    }
+
+    // --- Demo Mode Live Telemetry Updater ---
+    function updateDemoTelemetry() {
+      time += 0.025;
+
+      // Realistic sensor noise simulation
+      const pitch = (Math.sin(time * 0.5) * 4).toFixed(1);
+      const roll = (Math.cos(time * 0.4) * 2.5).toFixed(1);
+      const gas = Math.floor(400 + Math.sin(time * 0.2) * 50);
+
+      document.getElementById('valPitch').innerHTML = `${pitch > 0 ? '+' : ''}${pitch}<span class="metric-unit">°</span>`;
+      document.getElementById('valRoll').innerHTML = `${roll > 0 ? '+' : ''}${roll}<span class="metric-unit">°</span>`;
+      document.getElementById('valGas').innerHTML = `${gas}<span class="metric-unit">ADC</span>`;
+      document.getElementById('barGas').style.width = `${(gas / 4095) * 100}%`;
+
+      renderSpine();
+      requestAnimationFrame(updateDemoTelemetry);
+    }
+    requestAnimationFrame(updateDemoTelemetry);
+
+    // --- Slider & Control Listeners ---
+    document.getElementById('sliderFreq').addEventListener('input', (e) => {
+      freq = parseFloat(e.target.value);
+      document.getElementById('lblFreq').innerText = freq;
+    });
+
+    document.getElementById('sliderAmp').addEventListener('input', (e) => {
+      amp = parseInt(e.target.value);
+      document.getElementById('lblAmp').innerText = amp;
+    });
+
+    document.getElementById('sliderSteer').addEventListener('input', (e) => {
+      steer = parseInt(e.target.value);
+      document.getElementById('lblSteer').innerText = steer;
+    });
+
+    document.getElementById('btnSteerLeft').addEventListener('click', () => {
+      steer = -15;
+      document.getElementById('sliderSteer').value = steer;
+      document.getElementById('lblSteer').innerText = steer;
+    });
+
+    document.getElementById('btnSteerStraight').addEventListener('click', () => {
+      steer = 0;
+      document.getElementById('sliderSteer').value = steer;
+      document.getElementById('lblSteer').innerText = steer;
+    });
+
+    document.getElementById('btnSteerRight').addEventListener('click', () => {
+      steer = 15;
+      document.getElementById('sliderSteer').value = steer;
+      document.getElementById('lblSteer').innerText = steer;
+    });
+
+    document.getElementById('btnEmergencyStop').addEventListener('click', () => {
+      freq = 0;
+      document.getElementById('sliderFreq').value = 0;
+      document.getElementById('lblFreq').innerText = '0 (STOPPED)';
+    });
+
+    // --- WebSerial 1-Click Connect to Real ESP32 ---
+    document.getElementById('btnConnectSerial').addEventListener('click', async () => {
+      if (!('serial' in navigator)) {
+        alert('WebSerial is supported in Google Chrome, Edge, and Chromium-based browsers.');
+        return;
+      }
+
+      try {
+        const port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+        document.getElementById('connectionBadge').innerText = '● LIVE ESP32 CONNECTED';
+        document.getElementById('connectionBadge').className = 'badge connected';
+
+        const reader = port.readable.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value);
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            parseTelemetry(line);
+          }
+        }
+      } catch (err) {
+        console.error('Serial connection error:', err);
+      }
+    });
+
+    function parseTelemetry(line) {
+      // Parses format: [TELEMETRY] Pitch: +3.2° | Roll: -1.4° | Gas: 420 | Fire: None | Temp: 23.5°C | Hum: 68.0%
+      const gasMatch = line.match(/Gas:\s*(\d+)/);
+      const fireMatch = line.match(/Fire:\s*([A-Za-z ]+)/);
+      const tempMatch = line.match(/Temp:\s*([+-]?\d+\.?\d*)/);
+      const humMatch = line.match(/Hum:\s*([+-]?\d+\.?\d*)/);
+
+      if (gasMatch) {
+        const g = parseInt(gasMatch[1]);
+        document.getElementById('valGas').innerHTML = `${g}<span class="metric-unit">ADC</span>`;
+        document.getElementById('barGas').style.width = `${(g / 4095) * 100}%`;
+        const alert = g > 1800;
+        document.getElementById('gasStatus').innerText = alert ? 'HAZARDOUS GAS DETECTED!' : 'SAFE ATMOSPHERE';
+        document.getElementById('gasStatus').className = `status-pill ${alert ? 'hazard' : 'safe'}`;
+      }
+
+      if (fireMatch) {
+        const fire = fireMatch[1].trim() !== 'None';
+        document.getElementById('valFlame').innerText = fire ? 'FIRE ALERT!' : 'CLEAR';
+        document.getElementById('flameStatus').innerText = fire ? 'ACTIVE FIRE DETECTED!' : 'NO FIRE DETECTED';
+        document.getElementById('flameStatus').className = `status-pill ${fire ? 'hazard' : 'safe'}`;
+      }
+
+      if (tempMatch) document.getElementById('valTemp').innerHTML = `${tempMatch[1]}<span class="metric-unit">°C</span>`;
+      if (humMatch) document.getElementById('valHum').innerHTML = `${humMatch[1]}<span class="metric-unit">%</span>`;
+    }
+  </script>
+</body>
+</html>
