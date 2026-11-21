@@ -109,13 +109,21 @@ The ESP32 calculates these target angles at a consistent **40 Hz (25 ms interval
 2. **Anisotropic Friction:** The passive circular wheel collars allow low resistance along the forward axis while blocking lateral slipping ($\mu_n \gg \mu_t$).
 3. **Thrust Generation:** The normal ground reaction force resolves into net forward thrust driving the robot along narrow paths.
 
-| Joint (Segment) | Phase Offset | $t = 0.00\text{s}$ (Angle / Tick) | $t = 0.25\text{s}$ (Angle / Tick) | $t = 0.50\text{s}$ (Angle / Tick) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Servo 01 (Head)** | $0^\circ$ | $+0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 |
-| **Servo 04** | $120^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 |
-| **Servo 07** | $240^\circ$ | $-30.3^\circ$ / 1703 | $-33.8^\circ$ / 1663 | $-17.5^\circ$ / 1849 |
-| **Servo 10** | $360^\circ$ | $+0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 |
-| **Servo 13 (Tail)** | $480^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 |
+| Joint ID | Phase Offset | $t = 0.00\text{s}$ (Angle / Tick) | $t = 0.25\text{s}$ (Angle / Tick) | $t = 0.50\text{s}$ (Angle / Tick) | $t = 0.75\text{s}$ (Angle / Tick) | $t = 1.00\text{s}$ (Angle / Tick) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Servo 01 (Head)** | $0^\circ$ | $+0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 | $+24.7^\circ$ / 2330 | $+0.0^\circ$ / 2048 |
+| **Servo 02** | $40^\circ$ | $+22.5^\circ$ / 2304 | $+34.9^\circ$ / 2445 | $+26.8^\circ$ / 2353 | $+3.1^\circ$ / 2083 | $-22.5^\circ$ / 1792 |
+| **Servo 03** | $80^\circ$ | $+34.5^\circ$ / 2440 | $+28.7^\circ$ / 2374 | $+6.1^\circ$ / 2117 | $-20.1^\circ$ / 1820 | $-34.5^\circ$ / 1656 |
+| **Servo 04** | $120^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 | $-33.8^\circ$ / 1663 | $-30.3^\circ$ / 1703 |
+| **Servo 05** | $160^\circ$ | $+12.0^\circ$ / 2184 | $-14.8^\circ$ / 1880 | $-32.9^\circ$ / 1674 | $-31.7^\circ$ / 1687 | $-12.0^\circ$ / 1912 |
+| **Servo 06** | $200^\circ$ | $-12.0^\circ$ / 1912 | $-31.7^\circ$ / 1687 | $-32.9^\circ$ / 1674 | $-14.8^\circ$ / 1880 | $+12.0^\circ$ / 2184 |
+| **Servo 07** | $240^\circ$ | $-30.3^\circ$ / 1703 | $-33.8^\circ$ / 1663 | $-17.5^\circ$ / 1849 | $+9.1^\circ$ / 2151 | $+30.3^\circ$ / 2393 |
+| **Servo 08** | $280^\circ$ | $-34.5^\circ$ / 1656 | $-20.1^\circ$ / 1820 | $+6.1^\circ$ / 2117 | $+28.7^\circ$ / 2374 | $+34.5^\circ$ / 2440 |
+| **Servo 09** | $320^\circ$ | $-22.5^\circ$ / 1792 | $+3.1^\circ$ / 2083 | $+26.8^\circ$ / 2353 | $+34.9^\circ$ / 2445 | $+22.5^\circ$ / 2304 |
+| **Servo 10** | $360^\circ$ | $0.0^\circ$ / 2048 | $+24.7^\circ$ / 2330 | $+35.0^\circ$ / 2446 | $+24.7^\circ$ / 2330 | $+0.0^\circ$ / 2048 |
+| **Servo 11** | $400^\circ$ | $+22.5^\circ$ / 2304 | $+34.9^\circ$ / 2445 | $+26.8^\circ$ / 2353 | $+3.1^\circ$ / 2083 | $-22.5^\circ$ / 1792 |
+| **Servo 12** | $440^\circ$ | $+34.5^\circ$ / 2440 | $+28.7^\circ$ / 2374 | $+6.1^\circ$ / 2117 | $-20.1^\circ$ / 1820 | $-34.5^\circ$ / 1656 |
+| **Servo 13 (Tail)** | $480^\circ$ | $+30.3^\circ$ / 2393 | $+9.1^\circ$ / 2151 | $-17.5^\circ$ / 1849 | $-33.8^\circ$ / 1663 | $-30.3^\circ$ / 1703 |
 
 > 📖 **Full Numerical Dataset & Derivation:** See [docs/kinematics.md](docs/kinematics.md) for the complete 13-joint angle/tick data matrix across the full cycle and ground reaction force analysis.
 
